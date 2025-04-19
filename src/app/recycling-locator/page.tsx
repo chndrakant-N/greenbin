@@ -3,7 +3,6 @@
 import { Suspense } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Location, RecyclingCenter, getNearbyRecyclingCenters } from '@/services/google-maps';
-import { env } from '@/env.mjs';
 
 interface GoogleMapsProps {
   apiKey: string;
@@ -35,7 +34,7 @@ async function GoogleMaps({ apiKey, location, recyclingCenters }: GoogleMapsProp
 async function RecyclingLocatorPage() {
   const userLocation: Location = { lat: 34.0522, lng: -118.2437 }; // Hardcoded location for now
   const recyclingCenters = await getNearbyRecyclingCenters(userLocation);
-  const googleMapsApiKey = env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const googleMapsApiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   return (
     <div className="container mx-auto flex flex-col items-center justify-center min-h-screen py-2">
