@@ -1,8 +1,9 @@
-'use client';
+'use server';
 
-import {useState, useEffect} from 'react';
-import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card';
-import {Location, RecyclingCenter, getNearbyRecyclingCenters} from '@/services/google-maps';
+import { Suspense } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Location, RecyclingCenter, getNearbyRecyclingCenters } from '@/services/google-maps';
+import { env } from '@/env.mjs';
 
 interface GoogleMapsProps {
   apiKey: string;
@@ -10,8 +11,8 @@ interface GoogleMapsProps {
   recyclingCenters: RecyclingCenter[];
 }
 
-async function GoogleMaps({apiKey, location, recyclingCenters}: GoogleMapsProps) {
-  const {ReactGoogleMaps} = await import('@vis.gl/react-google-maps');
+async function GoogleMaps({ apiKey, location, recyclingCenters }: GoogleMapsProps) {
+  const { ReactGoogleMaps } = await import('@vis.gl/react-google-maps');
   return (
     <ReactGoogleMaps
       googleMapsApiKey={apiKey}
@@ -20,7 +21,7 @@ async function GoogleMaps({apiKey, location, recyclingCenters}: GoogleMapsProps)
       defaultCenter={location}
       defaultZoom={12}
     >
-      {recyclingCenters.map(center => (
+      {recyclingCenters.map((center) => (
         <ReactGoogleMaps.Marker
           key={center.name}
           position={center.location}
@@ -31,43 +32,10 @@ async function GoogleMaps({apiKey, location, recyclingCenters}: GoogleMapsProps)
   );
 }
 
-export default function RecyclingLocatorPage() {
-  const [userLocation, setUserLocation] = useState<Location | null>(null);
-  const [recyclingCenters, setRecyclingCenters] = useState<RecyclingCenter[]>([]);
-  const [googleMapsApiKey, setGoogleMapsApiKey] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Get user's current location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          setUserLocation({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        error => {
-          console.error('Error getting user location:', error);
-        }
-      );
-    } else {
-      console.error('Geolocation is not supported by this browser.');
-    }
-
-    // Load Google Maps API Key from .env file
-    setGoogleMapsApiKey(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || null);
-  }, []);
-
-  useEffect(() => {
-    async function loadRecyclingCenters() {
-      if (userLocation) {
-        const centers = await getNearbyRecyclingCenters(userLocation);
-        setRecyclingCenters(centers);
-      }
-    }
-
-    loadRecyclingCenters();
-  }, [userLocation]);
+async function RecyclingLocatorPage() {
+  const userLocation: Location = { lat: 34.0522, lng: -118.2437 }; // Hardcoded location for now
+  const recyclingCenters = await getNearbyRecyclingCenters(userLocation);
+  const googleMapsApiKey = env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   return (
     <div className="container mx-auto flex flex-col items-center justify-center min-h-screen py-2">
@@ -77,30 +45,28 @@ export default function RecyclingLocatorPage() {
           <CardDescription>Find the nearest recycling centers and waste collection points.</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col space-y-4">
-          {userLocation ? (
-            <>
-              {googleMapsApiKey ? (
-                <GoogleMaps
-                  apiKey={googleMapsApiKey}
-                  location={userLocation}
-                  recyclingCenters={recyclingCenters}
-                />
-              ) : (
-                <p>Error: Google Maps API Key not found.</p>
-              )}
-              <ul className="list-disc pl-5">
-                {recyclingCenters.map(center => (
-                  <li key={center.name}>
-                    <strong>{center.name}</strong> - {center.details}
-                  </li>
-                ))}
-              </ul>
-            </>
+          {googleMapsApiKey ? (
+            <Suspense fallback={<p>Loading map...</p>}>
+              <GoogleMaps
+                apiKey={googleMapsApiKey}
+                location={userLocation}
+                recyclingCenters={recyclingCenters}
+              />
+            </Suspense>
           ) : (
-            <p>Loading your location...</p>
+            <p>Error: Google Maps API Key not found.</p>
           )}
+          <ul className="list-disc pl-5">
+            {recyclingCenters.map((center) => (
+              <li key={center.name}>
+                <strong>{center.name}</strong> - {center.details}
+              </li>
+            ))}
+          </ul>
         </CardContent>
       </Card>
     </div>
   );
 }
+
+export default RecyclingLocatorPage;
